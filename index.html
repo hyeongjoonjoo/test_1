@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>취했니?</title>
+  <style>
+    /* ─── Reset & Base ──────────────────────────────────────────── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0f0f1a;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #app {
+      width: 100%;
+      max-width: 480px;
+      min-height: 100dvh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ─── Screen Base ───────────────────────────────────────────── */
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem 1.5rem;
+      gap: 1.5rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .screen.active { opacity: 1; pointer-events: all; }
+
+    /* ─── Utility ───────────────────────────────────────────────── */
+    .gradient-text {
+      background: linear-gradient(135deg, #ffcc33, #ffb347);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #ffcc33, #ffb347);
+      color: #0f0f1a;
+      border: none;
+      border-radius: 50px;
+      padding: 1rem 2.5rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(255, 204, 51, 0.35);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      width: 100%;
+      max-width: 320px;
+    }
+    .btn-primary:hover  { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(255,204,51,.55); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-secondary {
+      background: rgba(255,255,255,.07);
+      color: rgba(255,255,255,.8);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 50px;
+      padding: 0.9rem 2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      max-width: 320px;
+      transition: background 0.2s ease;
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,.12); }
+
+    /* ─── Background Stars ──────────────────────────────────────── */
+    #stars-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .star {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,.6);
+      animation: twinkle var(--d) ease-in-out infinite var(--delay);
+    }
+    @keyframes twinkle {
+      0%,100% { opacity: .15; transform: scale(1); }
+      50%      { opacity: 1;   transform: scale(1.6); }
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       TITLE
+    ══════════════════════════════════════════════════════════════ */
+    #screen-title { text-align: center; }
+
+    .title-emoji {
+      font-size: 5rem;
+      animation: wobble 2.4s ease-in-out infinite;
+    }
+    @keyframes wobble {
+      0%,100% { transform: rotate(-8deg); }
+      50%      { transform: rotate(8deg); }
+    }
+
+    .title-main {
+      font-size: 2.6rem;
+      font-weight: 900;
+      line-height: 1.2;
+    }
+
+    .title-sub {
+      font-size: .95rem;
+      color: rgba(255,255,255,.55);
+      line-height: 1.7;
+    }
+
+    .title-badge {
+      background: rgba(255,204,51,.12);
+      border: 1px solid rgba(255,204,51,.35);
+      border-radius: 50px;
+      padding: .35rem 1rem;
+      font-size: .82rem;
+      color: #ffcc33;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       TRANSITION
+    ══════════════════════════════════════════════════════════════ */
+    #screen-transition { gap: 2.5rem; }
+
+    .trans-label {
+      font-size: .8rem;
+      color: rgba(255,255,255,.4);
+      text-transform: uppercase;
+      letter-spacing: .2em;
+    }
+
+    /* Card deck */
+    .cards-stage {
+      position: relative;
+      width: 200px;
+      height: 280px;
+    }
+
+    .deck-card {
+      position: absolute;
+      width: 160px;
+      height: 220px;
+      border-radius: 18px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 2.8rem;
+      /* default: stacked at center */
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      border: 2px solid rgba(255,204,51,.25);
+      box-shadow: 0 8px 28px rgba(0,0,0,.45);
+      transition: all .5s cubic-bezier(.25,.46,.45,.94);
+      will-change: transform, opacity;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       COUNTDOWN
+    ══════════════════════════════════════════════════════════════ */
+    #screen-countdown { text-align: center; gap: 1.2rem; }
+
+    .countdown-label {
+      font-size: .8rem;
+      color: rgba(255,255,255,.4);
+      text-transform: uppercase;
+      letter-spacing: .2em;
+    }
+
+    .countdown-ring {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      border: 3px solid rgba(255,255,255,.1);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+    /* Animated arc — redrawn via JS conic-gradient */
+    .countdown-ring::before {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      background: conic-gradient(rgba(255,255,255,.18) var(--arc, 0deg), transparent 0deg);
+      transition: none;
+    }
+
+    .countdown-number {
+      font-size: 7rem;
+      font-weight: 900;
+      line-height: 1;
+      position: relative;
+      z-index: 1;
+    }
+    .countdown-number.pop {
+      animation: numPop .85s cubic-bezier(.22,1,.36,1) forwards;
+    }
+    @keyframes numPop {
+      0%   { transform: scale(1.8); opacity: 0; }
+      35%  { transform: scale(1);   opacity: 1; }
+      85%  { transform: scale(1);   opacity: 1; }
+      100% { transform: scale(.7);  opacity: 0; }
+    }
+
+    .countdown-hint {
+      font-size: .9rem;
+      color: rgba(255,255,255,.4);
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       GAME
+    ══════════════════════════════════════════════════════════════ */
+
+    /* Body */
+    .game-body {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem 1.5rem;
+      gap: 1.5rem;
+      text-align: center;
+    }
+
+    .game-placeholder {
+      width: 100%;
+      background: rgba(255,255,255,.03);
+      border: 2px dashed rgba(255,204,51,.3);
+      border-radius: 20px;
+      padding: 3rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .75rem;
+    }
+    .game-placeholder .icon { font-size: 3rem; }
+    .game-placeholder p { font-size: .95rem; color: rgba(255,255,255,.35); }
+
+    /* ══════════════════════════════════════════════════════════════
+       RESULT
+    ══════════════════════════════════════════════════════════════ */
+    #screen-result {
+      justify-content: flex-start;
+      padding-top: 3rem;
+      overflow-y: auto;
+      text-align: center;
+    }
+
+    .result-title { font-size: 1rem; color: rgba(255,255,255,.5); font-weight: 600; }
+
+    .result-badge {
+      background: linear-gradient(135deg, #ffcc33, #ffb347);
+      border-radius: 22px;
+      padding: 1.5rem 2.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .4rem;
+      box-shadow: 0 8px 36px rgba(255,204,51,.3);
+    }
+    .result-badge.pop { animation: badgePop .5s cubic-bezier(.34,1.56,.64,1) .15s both; }
+    @keyframes badgePop {
+      from { transform: scale(.4); opacity: 0; }
+      to   { transform: scale(1);  opacity: 1; }
+    }
+
+    .badge-emoji  { font-size: 3.5rem; }
+    .badge-grade  { font-size: 2rem; font-weight: 900; color: #0f0f1a; }
+    .badge-sub    { font-size: .88rem; color: rgba(15,15,26,.65); font-weight: 600; }
+
+    .result-score-wrap { display: flex; flex-direction: column; align-items: center; gap: .2rem; }
+    .result-score-num  { font-size: 3.5rem; font-weight: 900; }
+    .result-score-lbl  { font-size: .85rem; color: rgba(255,255,255,.45); }
+
+    .result-msg {
+      background: rgba(255,255,255,.05);
+      border-radius: 14px;
+      padding: 1.1rem 1.25rem;
+      font-size: .95rem;
+      color: rgba(255,255,255,.78);
+      line-height: 1.65;
+      max-width: 320px;
+    }
+
+    .result-stats {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: .65rem;
+    }
+    .stat-card {
+      background: rgba(255,255,255,.05);
+      border-radius: 12px;
+      padding: .8rem .5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .2rem;
+    }
+    .stat-val { font-size: 1.25rem; font-weight: 700; color: #ffcc33; }
+    .stat-lbl { font-size: .7rem; color: rgba(255,255,255,.38); }
+
+    .result-actions { display: flex; flex-direction: column; gap: .75rem; width: 100%; align-items: center; padding-bottom: 2rem; }
+
+    /* ─── Confetti ──────────────────────────────────────────────── */
+    .confetti {
+      position: fixed;
+      top: -12px;
+      border-radius: 2px;
+      pointer-events: none;
+      z-index: 200;
+      animation: cFall linear forwards;
+    }
+    @keyframes cFall {
+      0%   { transform: translateY(0)    rotate(0deg);   opacity: 1; }
+      100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+    }
+
+    /* ─── Dev Nav (remove before launch) ───────────────────────── */
+    #dev-nav {
+      position: fixed;
+      bottom: .75rem;
+      right: .75rem;
+      display: flex;
+      flex-direction: column;
+      gap: .35rem;
+      z-index: 999;
+    }
+    #dev-nav button {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.18);
+      color: rgba(255,255,255,.7);
+      padding: .25rem .55rem;
+      font-size: .68rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #dev-nav button:hover { background: rgba(255,255,255,.16); }
+  </style>
+</head>
+<body>
+
+<!-- Background Stars -->
+<div id="stars-bg"></div>
+
+<div id="app">
+
+  <!-- ── TITLE ────────────────────────────────────────────────── -->
+  <section class="screen" id="screen-title">
+    <div class="title-emoji">🍺</div>
+    <h1 class="title-main">
+      <span class="gradient-text">나 지금</span><br>취했니?
+    </h1>
+    <p class="title-sub">게임을 통해 취했는지 확인해보세요.</p>
+    <button class="btn-primary" onclick="App.start()">취했는지 테스트하기</button>
+  </section>
+
+  <!-- ── TRANSITION ───────────────────────────────────────────── -->
+  <section class="screen" id="screen-transition">
+    <p class="trans-label">게임 선택 중…</p>
+    <div class="cards-stage" id="cards-stage">
+      <div class="deck-card" data-card="0">🎲</div>
+      <div class="deck-card" data-card="1">🎯</div>
+      <div class="deck-card" data-card="2">✏️</div>
+      <div class="deck-card" data-card="3">🎵</div>
+      <div class="deck-card" data-card="4">🧠</div>
+    </div>
+  </section>
+
+  <!-- ── COUNTDOWN ────────────────────────────────────────────── -->
+  <section class="screen" id="screen-countdown">
+    <p class="countdown-label">준비하세요!</p>
+    <div class="countdown-ring" id="countdown-ring">
+      <div class="countdown-number gradient-text" id="countdown-num">3</div>
+    </div>
+    <p class="countdown-hint">화면을 응시하세요 👀</p>
+  </section>
+
+  <!-- ── GAME ─────────────────────────────────────────────────── -->
+  <section class="screen" id="screen-game">
+    <div class="game-body">
+      <div class="game-placeholder">
+        <span class="icon">🎮</span>
+        <p>미니게임이 여기에 표시됩니다</p>
+      </div>
+      <button class="btn-primary" id="result-btn" style="display:none" onclick="App.goResult()">결과 보기</button>
+    </div>
+  </section>
+
+  <!-- ── RESULT ────────────────────────────────────────────────── -->
+  <section class="screen" id="screen-result">
+    <p class="result-title">테스트 결과</p>
+
+    <div class="result-badge" id="result-badge">
+      <span class="badge-emoji" id="r-emoji">😵</span>
+      <span class="badge-grade" id="r-grade">만취</span>
+      <span class="badge-sub"   id="r-sub">오늘은 여기까지…</span>
+    </div>
+
+    <div class="result-score-wrap">
+      <span class="result-score-num gradient-text" id="r-score">42점</span>
+      <span class="result-score-lbl">최종 점수</span>
+    </div>
+
+    <p class="result-msg" id="r-msg">결과 메시지가 여기 표시됩니다.</p>
+
+    <div class="result-stats">
+      <div class="stat-card"><span class="stat-val" id="r-stat0">—</span><span class="stat-lbl">평균 반응속도</span></div>
+      <div class="stat-card"><span class="stat-val" id="r-stat1">—</span><span class="stat-lbl">정답 수</span></div>
+      <div class="stat-card"><span class="stat-val" id="r-stat2">—</span><span class="stat-lbl">등급</span></div>
+    </div>
+
+    <div class="result-actions">
+      <button class="btn-primary"    onclick="App.restart()">다시 테스트하기</button>
+      <button class="btn-secondary"  onclick="App.share()">📤 결과 공유하기</button>
+    </div>
+  </section>
+
+</div><!-- /#app -->
+
+<!-- Dev navigation panel -->
+<div id="dev-nav">
+  <button onclick="App.setState('TITLE')">TITLE</button>
+  <button onclick="App.setState('TRANSITION')">TRANS</button>
+  <button onclick="App.setState('COUNTDOWN')">COUNT</button>
+  <button onclick="App.setState('GAME')">GAME</button>
+  <button onclick="App.setState('RESULT')">RESULT</button>
+</div>
+
+<script>
+/* ================================================================
+   STATE MACHINE
+================================================================ */
+const SCREEN_IDS = {
+  TITLE:      'screen-title',
+  TRANSITION: 'screen-transition',
+  COUNTDOWN:  'screen-countdown',
+  GAME:       'screen-game',
+  RESULT:     'screen-result',
+};
+
+const GAME_CARDS = [
+  { emoji: '⚡', name: '반응속도\n테스트' },
+  { emoji: '🧠', name: '기억력\n테스트' },
+  { emoji: '✏️', name: '따라\n그리기' },
+  { emoji: '🎵', name: '리듬\n맞추기' },
+  { emoji: '👁️', name: '집중력\n테스트' },
+];
+
+const GRADES = [
+  { min: 90, emoji: '😎', grade: 'S', text: '완전 멀쩡',  sub: '당신은 진짜 맑음',         msg: '오늘 술은 어디 갔나요? 완전히 멀쩡하십니다! 🎉',              confetti: true  },
+  { min: 75, emoji: '🙂', grade: 'A', text: '거의 멀쩡',  sub: '아직 이성이 살아있어요',    msg: '아직 이성이 살아있군요. 딱 한 잔만 더!',                      confetti: true  },
+  { min: 55, emoji: '😅', grade: 'B', text: '살짝 취함',  sub: '슬슬 조심하세요',           msg: '택시 앱은 미리 켜두세요.\n지금이 황금타이밍입니다 🚕',         confetti: false },
+  { min: 35, emoji: '😵‍💫', grade: 'C', text: '많이 취함', sub: '귀가를 고려하세요',         msg: '지금 바로 물 한 잔 마시세요 💧\n귀가 권고!',                  confetti: false },
+  { min: 0,  emoji: '🥴', grade: 'D', text: '만취',       sub: '오늘은 여기까지…',          msg: '지금 당장 귀가를 추천드립니다 🏠\n택시를 불러드릴까요?',      confetti: false },
+];
+
+/* shared game data — filled in by actual mini-games later */
+let gameData = {
+  score: 0,
+  answers: 0,
+  avgReaction: 0,
+  currentStage: 0,
+};
+
+/* ── countdown internals ── */
+let _cdTimer  = null;
+let _arcTimer = null;
+
+/* ================================================================
+   App namespace
+================================================================ */
+const App = (() => {
+
+  let _current = null;
+
+  /* ── Core state switch ──────────────────────────────────────── */
+  function setState(name) {
+    const prev = document.querySelector('.screen.active');
+    if (prev) prev.classList.remove('active');
+
+    setTimeout(() => {
+      _current = name;
+      const el = document.getElementById(SCREEN_IDS[name]);
+      el.classList.add('active');
+      _onEnter(name);
+    }, 310); // just after CSS transition (0.3 s)
+  }
+
+  function _onEnter(name) {
+    switch (name) {
+      case 'TRANSITION': _runTransition(); break;
+      case 'COUNTDOWN':  _runCountdown();  break;
+      case 'GAME':       _initGame();      break;
+      case 'RESULT':     _showResult();    break;
+    }
+  }
+
+  /* ── Public entry-points ────────────────────────────────────── */
+  function start()    { setState('TRANSITION'); }
+  function goResult() { setState('RESULT'); }
+  function restart()  {
+    clearTimeout(_cdTimer);
+    clearInterval(_arcTimer);
+    gameData = { score: 0, answers: 0, avgReaction: 0, currentStage: 0 };
+    setState('TITLE');
+  }
+
+  /* ── TRANSITION ─────────────────────────────────────────────── */
+  function _runTransition() {
+    const cards = Array.from(document.querySelectorAll('.deck-card'));
+    const emojis = ['🎲', '🎯', '✏️', '🎵', '🧠'];
+
+    // Reset to stacked position first
+    cards.forEach((c, i) => {
+      c.style.transition = 'none';
+      c.style.transform  = 'translate(-50%, -50%)';
+      c.style.opacity    = '1';
+      c.style.boxShadow  = '0 8px 28px rgba(0,0,0,.45)';
+      c.style.border     = '2px solid rgba(255,204,51,.25)';
+      c.style.background = 'linear-gradient(135deg, #1a1a2e, #16213e)';
+      c.textContent      = emojis[i];
+      c.style.zIndex     = i;
+    });
+
+    // Fan out
+    const fan = [
+      { x: -110, y: -40, r: -28 },
+      { x: -55,  y: -80, r: -12 },
+      { x:   5,  y: -90, r:   2 },
+      { x:  65,  y: -75, r:  14 },
+      { x: 115,  y: -35, r:  28 },
+    ];
+
+    setTimeout(() => {
+      cards.forEach((c, i) => {
+        c.style.transition = `all .55s cubic-bezier(.25,.46,.45,.94) ${i * 0.07}s`;
+        c.style.transform  = `translate(calc(-50% + ${fan[i].x}px), calc(-50% + ${fan[i].y}px)) rotate(${fan[i].r}deg)`;
+      });
+    }, 250);
+
+    // Pick winner
+    const winner = Math.floor(Math.random() * cards.length);
+
+    // Dim losers
+    setTimeout(() => {
+      cards.forEach((c, i) => {
+        if (i !== winner) {
+          c.style.transition = 'opacity .35s ease, transform .35s ease';
+          c.style.opacity    = '.25';
+        }
+      });
+      const w = cards[winner];
+      w.style.transition = 'all .4s cubic-bezier(.34,1.56,.64,1)';
+      w.style.transform  = `translate(calc(-50% + ${fan[winner].x}px), calc(-50% + ${fan[winner].y}px)) rotate(${fan[winner].r}deg) scale(1.12)`;
+      w.style.boxShadow  = '0 0 34px rgba(255,204,51,.65)';
+      w.style.border     = '2px solid #ffcc33';
+      w.style.zIndex     = '10';
+    }, 1000);
+
+    // Bring to center
+    setTimeout(() => {
+      cards.forEach((c, i) => { if (i !== winner) c.style.opacity = '0'; });
+      const w = cards[winner];
+      w.style.transition = 'all .55s cubic-bezier(.34,1.56,.64,1)';
+      w.style.transform  = 'translate(-50%, -50%) scale(1.05)';
+    }, 1700);
+
+    // Lift up before flip
+    setTimeout(() => {
+      const w = cards[winner];
+      w.style.transition = 'transform .4s cubic-bezier(.34,1.56,.64,1)';
+      w.style.transform  = 'translate(-50%, calc(-50% - 36px)) scale(1.08)';
+    }, 2150);
+
+    // Flip: half-way (edge-on)
+    setTimeout(() => {
+      const w = cards[winner];
+      w.style.transition = 'transform .18s ease';
+      w.style.transform  = 'translate(-50%, calc(-50% - 36px)) rotateY(90deg) scale(1.08)';
+    }, 2550);
+
+    // Flip: reveal front (gold) with game name
+    setTimeout(() => {
+      const g = GAME_CARDS[winner];
+      const w = cards[winner];
+      w.style.background = 'linear-gradient(135deg, #ffcc33, #ffb347)';
+      w.style.border     = 'none';
+      w.style.boxShadow  = '0 10px 36px rgba(255,204,51,.55)';
+      w.style.flexDirection = 'column';
+      w.style.gap        = '.5rem';
+      w.innerHTML = `
+        <span style="font-size:2.8rem">${g.emoji}</span>
+        <span style="font-size:.82rem;font-weight:800;color:#0f0f1a;white-space:pre-line;line-height:1.3;text-align:center">${g.name}</span>
+      `;
+      w.style.transition = 'transform .35s cubic-bezier(.34,1.56,.64,1)';
+      w.style.transform  = 'translate(-50%, calc(-50% - 36px)) rotateY(0deg) scale(1.08)';
+    }, 2730);
+
+    // Move on
+    setTimeout(() => setState('COUNTDOWN'), 3600);
+  }
+
+  /* ── COUNTDOWN ──────────────────────────────────────────────── */
+  function _runCountdown() {
+    clearTimeout(_cdTimer);
+    clearInterval(_arcTimer);
+
+    let count = 3;
+    const numEl  = document.getElementById('countdown-num');
+    const ringEl = document.getElementById('countdown-ring');
+
+    function _tick() {
+      if (count === 0) {
+        _showGo(numEl);
+        return;
+      }
+
+      // Number pop
+      numEl.classList.remove('pop');
+      void numEl.offsetWidth; // reflow to restart animation
+      numEl.textContent = count;
+      numEl.classList.add('pop');
+
+      // Arc sweep over 1 s
+      let deg = 0;
+      ringEl.style.setProperty('--arc', '0deg');
+      clearInterval(_arcTimer);
+      _arcTimer = setInterval(() => {
+        deg += 6; // 360° / 60 frames ≈ 6° per 16 ms ≈ 1 s
+        ringEl.style.setProperty('--arc', deg + 'deg');
+        if (deg >= 360) clearInterval(_arcTimer);
+      }, 16);
+
+      count--;
+      _cdTimer = setTimeout(_tick, 1000);
+    }
+
+    _tick();
+  }
+
+  function _showGo(numEl) {
+    clearInterval(_arcTimer);
+    numEl.classList.remove('pop');
+    void numEl.offsetWidth;
+    numEl.textContent = 'GO!';
+    numEl.style.fontSize = '4.5rem';
+    numEl.classList.add('pop');
+
+    _cdTimer = setTimeout(() => {
+      numEl.style.fontSize = '';
+      setState('GAME');
+    }, 900);
+  }
+
+  /* ── GAME ───────────────────────────────────────────────────── */
+  function _initGame() {
+    document.getElementById('result-btn').style.display = 'none';
+  }
+
+  function showResultBtn() {
+    const btn = document.getElementById('result-btn');
+    btn.style.display = '';
+    btn.style.animation = 'badgePop .4s cubic-bezier(.34,1.56,.64,1) both';
+  }
+
+  /* ── RESULT ─────────────────────────────────────────────────── */
+  function _showResult() {
+    const score = gameData.score || Math.floor(Math.random() * 100); // placeholder
+    const g     = GRADES.find(gr => score >= gr.min);
+
+    document.getElementById('r-emoji').textContent = g.emoji;
+    document.getElementById('r-grade').textContent = g.text;
+    document.getElementById('r-sub').textContent   = g.sub;
+    document.getElementById('r-score').textContent = score + '점';
+    document.getElementById('r-msg').textContent   = g.msg;
+    document.getElementById('r-stat0').textContent = gameData.avgReaction ? gameData.avgReaction.toFixed(1) + '초' : '—';
+    document.getElementById('r-stat1').textContent = gameData.answers   || '—';
+    document.getElementById('r-stat2').textContent = g.grade;
+
+    // Re-trigger badge animation
+    const badge = document.getElementById('result-badge');
+    badge.classList.remove('pop');
+    void badge.offsetWidth;
+    badge.classList.add('pop');
+
+    if (g.confetti) _spawnConfetti();
+  }
+
+  /* ── Share ──────────────────────────────────────────────────── */
+  function share() {
+    const score = document.getElementById('r-score').textContent;
+    const grade = document.getElementById('r-grade').textContent;
+    const text  = `🍺 나 지금 멀쩡해? 테스트 결과\n등급: ${grade} / 점수: ${score}\n\n당신도 도전해보세요!`;
+    if (navigator.share) {
+      navigator.share({ title: '나 지금 멀쩡해?', text });
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => alert('결과가 클립보드에 복사되었습니다! 📋'));
+    }
+  }
+
+  return { setState, start, goResult, restart, share, showResultBtn };
+})();
+
+/* ================================================================
+   CONFETTI
+================================================================ */
+function _spawnConfetti() {
+  const palette = ['#ffcc33','#ffb347','#ff6b6b','#4ecdc4','#45b7d1','#96e6a1','#c490d1'];
+  for (let i = 0; i < 50; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'confetti';
+      const size = 6 + Math.random() * 8;
+      el.style.cssText = `
+        left: ${Math.random() * 100}%;
+        width: ${size}px; height: ${size}px;
+        background: ${palette[Math.floor(Math.random() * palette.length)]};
+        border-radius: ${Math.random() > .5 ? '50%' : '2px'};
+        animation-duration: ${1.8 + Math.random() * 2}s;
+        animation-delay: ${Math.random() * .4}s;
+      `;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 3500);
+    }, i * 45);
+  }
+}
+
+/* ================================================================
+   BACKGROUND STARS
+================================================================ */
+(function initStars() {
+  const bg = document.getElementById('stars-bg');
+  for (let i = 0; i < 70; i++) {
+    const s = document.createElement('div');
+    const sz = .8 + Math.random() * 2;
+    s.className = 'star';
+    s.style.cssText = `
+      left: ${Math.random() * 100}%;
+      top:  ${Math.random() * 100}%;
+      width: ${sz}px; height: ${sz}px;
+      --d: ${2 + Math.random() * 4}s;
+      --delay: -${Math.random() * 5}s;
+    `;
+    bg.appendChild(s);
+  }
+})();
+
+/* ================================================================
+   BOOT
+================================================================ */
+App.setState('TITLE');
+</script>
+</body>
+</html>
