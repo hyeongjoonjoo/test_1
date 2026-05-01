@@ -400,6 +400,11 @@
       font-size:.92rem; font-weight:700;
       cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent;
       transition:transform .1s ease, opacity .15s ease;
+      animation:gfBtnIn .2s cubic-bezier(.34,1.56,.64,1) both;
+    }
+    @keyframes gfBtnIn {
+      from { opacity:0; transform:scale(.8); }
+      to   { opacity:1; transform:scale(1); }
     }
     .gf-btn:active:not(:disabled) { transform:scale(.91); }
     .gf-btn:disabled { opacity:.35; cursor:default; }
@@ -510,26 +515,6 @@
       100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
     }
 
-    /* ─── Dev Nav (remove before launch) ───────────────────────── */
-    #dev-nav {
-      position: fixed;
-      bottom: .75rem;
-      right: .75rem;
-      display: flex;
-      flex-direction: column;
-      gap: .35rem;
-      z-index: 999;
-    }
-    #dev-nav button {
-      background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.18);
-      color: rgba(255,255,255,.7);
-      padding: .25rem .55rem;
-      font-size: .68rem;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    #dev-nav button:hover { background: rgba(255,255,255,.16); }
   </style>
 </head>
 <body>
@@ -610,14 +595,6 @@
 
 </div><!-- /#app -->
 
-<!-- Dev navigation panel -->
-<div id="dev-nav">
-  <button onclick="App.setState('TITLE')">TITLE</button>
-  <button onclick="App.setState('TRANSITION')">TRANS</button>
-  <button onclick="App.setState('COUNTDOWN')">COUNT</button>
-  <button onclick="App.setState('GAME')">GAME</button>
-  <button onclick="App.setState('RESULT')">RESULT</button>
-</div>
 
 <script>
 /* ================================================================
@@ -1351,6 +1328,12 @@ const GameEmoji = (() => {
 ================================================================ */
 const GameFlag = (() => {
   const TIME_PER = 2500;
+  const BTNS = [
+    { action: 'blue-up',    cls: 'blue',  label: '🔵 청기 올리기' },
+    { action: 'white-up',   cls: 'white', label: '⚪ 백기 올리기' },
+    { action: 'blue-down',  cls: 'blue',  label: '🔵 청기 내리기' },
+    { action: 'white-down', cls: 'white', label: '⚪ 백기 내리기' },
+  ];
   const COMMANDS = [
     { text: '청기 올려!',                        answer: 'blue-up'    },
     { text: '백기 올려!',                        answer: 'white-up'   },
@@ -1386,19 +1369,27 @@ const GameFlag = (() => {
             <div class="gf-tbar" id="gf-tbar"></div>
           </div>
         </div>
-        <div class="gf-btns">
-          <button class="gf-btn blue"  ontouchend="GameFlag.press('blue-up',event)"  onclick="GameFlag.press('blue-up',event)">🔵 청기 올리기</button>
-          <button class="gf-btn white" ontouchend="GameFlag.press('white-up',event)" onclick="GameFlag.press('white-up',event)">⚪ 백기 올리기</button>
-          <button class="gf-btn blue"  ontouchend="GameFlag.press('blue-down',event)"  onclick="GameFlag.press('blue-down',event)">🔵 청기 내리기</button>
-          <button class="gf-btn white" ontouchend="GameFlag.press('white-down',event)" onclick="GameFlag.press('white-down',event)">⚪ 백기 내리기</button>
-        </div>
+        <div class="gf-btns" id="gf-btns"></div>
       </div>`;
+  }
+
+  function _shuffleBtns() {
+    const el = document.getElementById('gf-btns');
+    if (!el) return;
+    const shuffled = [...BTNS].sort(() => Math.random() - .5);
+    el.innerHTML = shuffled.map((b, i) => `
+      <button class="gf-btn ${b.cls}"
+        style="animation-delay:${i * 40}ms"
+        ontouchend="GameFlag.press('${b.action}',event)"
+        onclick="GameFlag.press('${b.action}',event)">${b.label}</button>
+    `).join('');
   }
 
   function _showCmd() {
     if (_done) return;
     if (_idx >= _seq.length) { _finish(); return; }
     _lock = false;
+    _shuffleBtns();
 
     const cmd = _seq[_idx];
     const txt  = document.getElementById('gf-cmd');
