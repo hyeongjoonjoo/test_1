@@ -333,6 +333,25 @@
     }
     .gtr-hint { font-size:.78rem; color:rgba(255,255,255,.26); text-align:center; }
 
+    .gtr-overlay {
+      position:absolute; inset:0; border-radius:14px;
+      background:rgba(15,15,26,.82); backdrop-filter:blur(2px);
+      display:flex; flex-direction:column; justify-content:center; align-items:center; gap:.9rem;
+      cursor:pointer; z-index:10; -webkit-tap-highlight-color:transparent;
+      transition:opacity .25s ease;
+    }
+    .gtr-overlay.hiding { opacity:0; pointer-events:none; }
+    .gtr-overlay-icon {
+      font-size:2.8rem; display:block;
+      animation:gtrFingerBounce 1.1s ease-in-out infinite;
+    }
+    @keyframes gtrFingerBounce {
+      0%,100% { transform:translateY(0); }
+      50%      { transform:translateY(-10px); }
+    }
+    .gtr-overlay-text { font-size:.95rem; color:rgba(255,255,255,.85); text-align:center; line-height:1.7; font-weight:600; }
+    .gtr-overlay-sub  { font-size:.75rem; color:rgba(255,255,255,.35); }
+
     /* ── Emoji Memory Game ───────────────────────────────────────── */
     .gem-wrap { display:flex; flex-direction:column; align-items:center; gap:1.1rem; width:100%; }
     .gem-title { font-size:.88rem; color:rgba(255,255,255,.5); font-weight:600; }
@@ -1084,7 +1103,7 @@ const GameTracking = (() => {
     _onDone = onComplete;
     _done = false; _distances = []; _timeLeft = DURATION;
     _render();
-    setTimeout(_initArena, 50);
+    setTimeout(_waitForTap, 50);
   }
 
   function _render() {
@@ -1097,9 +1116,33 @@ const GameTracking = (() => {
         <div class="gtr-bar-wrap"><div class="gtr-bar" id="gtr-bar"></div></div>
         <div class="gtr-arena" id="gtr-arena">
           <div class="gtr-dot" id="gtr-dot"></div>
+          <div class="gtr-overlay" id="gtr-overlay">
+            <span class="gtr-overlay-icon">👆</span>
+            <p class="gtr-overlay-text">화면을 터치한 채로<br>파란 점을 따라 움직이세요</p>
+            <span class="gtr-overlay-sub">탭하면 시작합니다</span>
+          </div>
         </div>
         <p class="gtr-hint">파란 원을 손가락으로 따라가세요</p>
       </div>`;
+  }
+
+  function _waitForTap() {
+    const overlay = document.getElementById('gtr-overlay');
+    if (!overlay) return;
+
+    function _onTap(e) {
+      e.preventDefault();
+      overlay.removeEventListener('click',      _onTap);
+      overlay.removeEventListener('touchstart', _onTap);
+      overlay.classList.add('hiding');
+      setTimeout(() => {
+        overlay.remove();
+        _initArena();
+      }, 250);
+    }
+
+    overlay.addEventListener('click',      _onTap);
+    overlay.addEventListener('touchstart', _onTap, { passive: false });
   }
 
   function _initArena() {
